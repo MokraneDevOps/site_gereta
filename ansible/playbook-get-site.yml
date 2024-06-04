@@ -1,0 +1,29 @@
+---
+- name: Cloner le repository Git
+  hosts: all
+  vars:
+    repo_url: 'git clone git@github.com:dolydev/projet-devops-greta78.git'
+    dest_dir: '/home/dalila/projet-file-rouge'
+    ssh_private_key: '/home/dalila/.ssh/id_rsa.pub'  # Spécifiez le chemin vers votre clé privée SSH
+  tasks:
+    - name: Installer Git si ce n'est pas déjà fait
+      apt:
+        name: git
+        state: present
+      become: yes
+
+    - name: Créer le répertoire projet-file-rouge s'il n'existe pas
+      file:
+        path: "{{ dest_dir }}"
+        state: directory
+        mode: '0755'
+      become: yes
+
+    - name: Cloner le repository
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ dest_dir }}"
+        version: HEAD
+        key_file: "{{ ssh_private_key }}"  # Spécifiez la clé SSH à utiliser pour l'authentification
+        force: yes
+      become: yes

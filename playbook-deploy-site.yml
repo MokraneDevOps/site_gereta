@@ -1,0 +1,92 @@
+---
+- name: Deploy Docker Compose application
+  hosts: local
+  become: true
+  tasks:
+    - name: Disable CD-ROM repository
+      lineinfile:
+        path: /etc/apt/sources.list
+        regexp: '^deb cdrom:'
+        line: '# deb cdrom:'
+        state: present
+
+    - name: Update APT package index
+      apt:
+        update_cache: yes
+
+    - name: Ensure Docker is installed
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+
+    - name: Ensure docker-compose is installed
+      apt:
+        name: docker-compose
+        state: present
+        update_cache: yes
+
+    - name: Start Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Create Docker Compose directory
+      file:
+        path: /home/dalila/docker-compose-project
+        state: directory
+        mode: '0755'
+
+    - name: Check if docker-compose.yaml exists
+      stat:
+        path: /home/dalila/projet-file-rouge/docker-compose.yaml
+      register: docker_compose_yml
+
+    - name: Copy docker-compose.yaml to target directory
+      copy:
+        src: /home/dalila/projet-file-rouge/docker-compose.yaml
+        dest: /home/dalila/docker-compose-project/docker-compose.yaml
+      when: docker_compose_yml.stat.exists
+
+    - name: Check if Dockerfile exists
+      stat:
+        path: /home/dalila/projet-file-rouge/Dockerfile
+      register: dockerfile
+
+    - name: Copy Dockerfile to target directory
+      copy:
+        src: /home/dalila/projet-file-rouge/Dockerfile
+        dest: /home/dalila/docker-compose-project/Dockerfile
+      when: dockerfile.stat.exists
+
+    - name: Check if php directory exists
+      stat:
+        path: /home/dalila/projet-file-rouge/php
+      register: php_dir
+
+    - name: Copy application files to target directory
+      copy:
+        src: /home/dalila/projet-file-rouge/php/
+        dest: /home/dalila/docker-compose-project/php/
+        mode: '0755'
+        remote_src: yes
+      when: php_dir.stat.exists
+
+    - name: Check if stagiaires.sql exists
+      stat:
+        path: /home/dalila/projet-file-rouge/stagiaires.sql
+      register: stagiaires_sql
+
+    - name: Copy SQL file to target directory
+      copy:
+        src: /home/dalila/projet-file-rouge/stagiaires.sql
+        dest: /home/dalila/docker-compose-project/stagiaires.sql
+        mode: '0644'
+      when: stagiaires_sql.stat.exists
+
+    - name: Run Docker Compose
+      community.docker.docker_compose:
+        project_src: /home/dalila/docker-compose-project
+        state: present
+        build: true
